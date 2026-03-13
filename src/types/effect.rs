@@ -44,6 +44,11 @@ pub struct Effect {
 
     /// Root node of the effect tree.
     pub root: super::node::EffectNode,
+
+    /// Target location from the editor's `Behavior > TargetLocation` setting.
+    /// Used by `AttractiveForce` force fields (C++ equivalent: `Manager::SetTargetLocation()`).
+    /// `None` if the EDIT chunk is missing or doesn't contain a TargetLocation.
+    pub target_location: Option<super::primitives::Vector3D>,
 }
 
 /// Culling sphere information.

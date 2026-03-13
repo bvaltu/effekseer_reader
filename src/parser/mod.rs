@@ -53,8 +53,22 @@ pub fn load_efkefc(data: &[u8]) -> Result<Effect, Error> {
 
 /// Parse an `.efkefc` container file (or raw `.efk`) with the given config.
 pub fn load_efkefc_with_config(data: &[u8], config: &ParseConfig) -> Result<Effect, Error> {
-    let bin_data = efkefc::extract_bin_chunk(data)?;
-    effect::parse_effect(bin_data, config)
+    let chunks = efkefc::extract_chunks(data)?;
+
+    // Parse EDIT chunk for editor behavior data (target_location, etc.)
+    let target_location = if let Some(edit_data) = chunks.edit {
+        match efkefc::parse_edit_chunk(edit_data) {
+            Ok(behavior) => behavior.target_location,
+            Err(e) => {
+                log::warn!("Failed to parse EDIT chunk: {e}");
+                None
+            }
+        }
+    } else {
+        None
+    };
+
+    effect::parse_effect(chunks.bin, config, target_location)
 }
 
 /// Parse a raw `.efk` (SKFE) binary using default strict config.
@@ -63,8 +77,10 @@ pub fn load_efk(data: &[u8]) -> Result<Effect, Error> {
 }
 
 /// Parse a raw `.efk` (SKFE) binary with the given config.
+///
+/// Raw `.efk` files do not contain an EDIT chunk, so `target_location` will be `None`.
 pub fn load_efk_with_config(data: &[u8], config: &ParseConfig) -> Result<Effect, Error> {
-    effect::parse_effect(data, config)
+    effect::parse_effect(data, config, None)
 }
 
 /// Parse an `.efkmat` material file using default strict config.

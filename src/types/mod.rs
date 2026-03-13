@@ -9,6 +9,7 @@ pub mod common_values;
 pub mod curve;
 pub mod custom_data;
 pub mod depth;
+pub mod dynamic_equation;
 pub mod effect;
 pub mod enums;
 pub mod fcurve;

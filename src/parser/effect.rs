@@ -3,11 +3,16 @@
 use crate::error::Error;
 use crate::reader::BinaryReader;
 use crate::types::effect::{CullingInfo, Effect};
+use crate::types::primitives::Vector3D;
 use crate::types::{CullingShape, ParseConfig};
 use crate::version::{self, VERSION_16_ALPHA8, VERSION_17_ALPHA3};
 
 /// Parse a raw SKFE effect binary into an [`Effect`].
-pub(crate) fn parse_effect(data: &[u8], config: &ParseConfig) -> Result<Effect, Error> {
+pub(crate) fn parse_effect(
+    data: &[u8],
+    config: &ParseConfig,
+    target_location: Option<Vector3D>,
+) -> Result<Effect, Error> {
     let mut reader = BinaryReader::new(data);
 
     // --- Header ---
@@ -145,6 +150,7 @@ pub(crate) fn parse_effect(data: &[u8], config: &ParseConfig) -> Result<Effect, 
         rendering_node_count,
         rendering_threshold,
         root,
+        target_location,
     })
 }
 

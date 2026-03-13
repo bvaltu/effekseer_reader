@@ -60,25 +60,39 @@ pub(crate) fn parse_renderer(
 // Shared helpers
 // ---------------------------------------------------------------------------
 
-/// Parse a NodeRendererTextureUVTypeParameter (24 bytes).
+/// Parse a NodeRendererTextureUVTypeParameter.
+/// The binary format is conditional on the UV type:
+///   Stretch (0): no additional data
+///   TilePerParticle (1): edge_head, edge_tail, loop_area_begin, loop_area_end
+///   Tile (2): tile_length only
 fn parse_texture_uv_type(
     reader: &mut BinaryReader,
     config: &ParseConfig,
 ) -> Result<NodeRendererTextureUVTypeParameter, Error> {
     let uv_type: TextureUVType = reader.read_enum(config, "TextureUVType.type")?;
-    let tile_length = reader.read_f32()?;
-    let tile_edge_head = reader.read_i32()?;
-    let tile_edge_tail = reader.read_i32()?;
-    let tile_loop_area_begin = reader.read_f32()?;
-    let tile_loop_area_end = reader.read_f32()?;
-    Ok(NodeRendererTextureUVTypeParameter {
+    let mut param = NodeRendererTextureUVTypeParameter {
         uv_type,
-        tile_length,
-        tile_edge_head,
-        tile_edge_tail,
-        tile_loop_area_begin,
-        tile_loop_area_end,
-    })
+        tile_length: 0.0,
+        tile_edge_head: 0,
+        tile_edge_tail: 0,
+        tile_loop_area_begin: 0.0,
+        tile_loop_area_end: 0.0,
+    };
+    match uv_type {
+        TextureUVType::TilePerParticle => {
+            param.tile_edge_head = reader.read_i32()?;
+            param.tile_edge_tail = reader.read_i32()?;
+            param.tile_loop_area_begin = reader.read_f32()?;
+            param.tile_loop_area_end = reader.read_f32()?;
+        }
+        TextureUVType::Tile => {
+            param.tile_length = reader.read_f32()?;
+        }
+        _ => {
+            // Stretch: no additional data
+        }
+    }
+    Ok(param)
 }
 
 /// Parse a RingSingleParameter.

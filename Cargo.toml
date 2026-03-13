@@ -20,6 +20,7 @@ eval = []
 thiserror = "2"
 bitflags = "2"
 log = "0.4"
+flate2 = "1"
 serde = { version = "1", features = ["derive"], optional = true }
 
 [dev-dependencies]

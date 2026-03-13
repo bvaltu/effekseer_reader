@@ -870,6 +870,21 @@ fn test_v17_file_has_lod_and_curves() {
     // Curves section is present (though may be empty).
 }
 
+/// Parse homing_laser.efkefc and verify target_location is extracted from EDIT chunk.
+#[test]
+fn test_homing_laser_target_location() {
+    let data = load_test_file("homing_laser.efkefc");
+    let effect = effekseer_reader::load_efkefc(&data).unwrap();
+
+    assert_eq!(effect.version, 1710);
+
+    // The Effekseer editor has Behavior > TargetLocation > Y = 15 for this effect.
+    let tl = effect.target_location.expect("should have target_location from EDIT chunk");
+    assert!((tl.x - 0.0).abs() < 0.001, "expected x=0, got {}", tl.x);
+    assert!((tl.y - 15.0).abs() < 0.001, "expected y=15, got {}", tl.y);
+    assert!((tl.z - 0.0).abs() < 0.001, "expected z=0, got {}", tl.z);
+}
+
 /// Verify all sample .efkefc files at minimum have valid EFKE/SKFE header.
 #[test]
 fn test_all_sample_efkefc_files_have_valid_header() {
@@ -880,6 +895,7 @@ fn test_all_sample_efkefc_files_have_valid_header() {
         "BasicRenderSettings_Blend.efkefc",
         "AlphaBlendTexture01.efkefc",
         "Gradient1.efkefc",
+        "homing_laser.efkefc",
     ];
 
     for name in &files {

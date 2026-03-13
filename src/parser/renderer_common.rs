@@ -260,6 +260,7 @@ pub(crate) fn parse_renderer_common(
         z_test,
         z_write,
         fade_in,
+        fade_out_type,
         fade_out,
         uv_params,
         uv_distortion_intensity,

@@ -44,6 +44,8 @@ pub struct ParameterRendererCommon {
     pub z_write: bool,
     /// Fade-in parameters.
     pub fade_in: Option<FadeParam>,
+    /// Fade-out type (None, WithinLifetime, AfterRemoved).
+    pub fade_out_type: super::enums::FadeOutType,
     /// Fade-out parameters.
     pub fade_out: Option<FadeParam>,
     /// UV parameters (up to 6 slots, indices 0-5).
