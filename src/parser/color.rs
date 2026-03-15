@@ -15,10 +15,12 @@ pub(crate) fn parse_all_type_color(
     config: &ParseConfig,
 ) -> Result<AllTypeColorParameter, Error> {
     let type_: AllTypeColorType = reader.read_enum(config, "AllTypeColor.type")?;
+    eprintln!("DEBUG_COLOR_PARSE: type={:?} at stream_pos={}", type_, reader.position());
 
     match type_ {
         AllTypeColorType::Fixed => {
             let all = reader.read_color()?;
+            eprintln!("DEBUG_COLOR_PARSE: Fixed color=({},{},{},{})", all.r, all.g, all.b, all.a);
             Ok(AllTypeColorParameter::Fixed { all })
         }
         AllTypeColorType::Random => {
@@ -39,6 +41,7 @@ pub(crate) fn parse_all_type_color(
         }
         _ => {
             // Unknown — default to fixed white
+            eprintln!("DEBUG_COLOR_PARSE: UNKNOWN type {:?} — defaulting to white!", type_);
             Ok(AllTypeColorParameter::Fixed {
                 all: crate::types::Color {
                     r: 255,

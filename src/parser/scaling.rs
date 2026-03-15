@@ -47,16 +47,10 @@ pub(crate) fn parse_scaling(
             ScalingParameter::Easing(Box::new(easing))
         }
         ParameterScalingType::SinglePva => {
-            let ref_eq_p = reader.read_ref_min_max()?;
-            let ref_eq_v = reader.read_ref_min_max()?;
-            let ref_eq_a = reader.read_ref_min_max()?;
             let scale = reader.read_random_float()?;
             let velocity = reader.read_random_float()?;
             let acceleration = reader.read_random_float()?;
             ScalingParameter::SinglePva {
-                ref_eq_p,
-                ref_eq_v,
-                ref_eq_a,
                 scale,
                 velocity,
                 acceleration,

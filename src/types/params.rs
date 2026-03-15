@@ -231,12 +231,6 @@ pub enum ScalingParameter {
     Easing(Box<ParameterEasingVector3D>),
     /// Single-axis PVA (uniform scale).
     SinglePva {
-        /// Dynamic equation refs for scale.
-        ref_eq_p: RefMinMax,
-        /// Dynamic equation refs for velocity.
-        ref_eq_v: RefMinMax,
-        /// Dynamic equation refs for acceleration.
-        ref_eq_a: RefMinMax,
         /// Uniform scale range.
         scale: RandomFloat,
         /// Velocity range.
