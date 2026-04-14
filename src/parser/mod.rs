@@ -9,6 +9,7 @@ mod depth;
 mod easing;
 mod effect;
 mod efkefc;
+mod efkpkg;
 mod fcurve;
 mod force_field;
 mod gpu_particles;
@@ -26,6 +27,8 @@ mod sound;
 mod spawn;
 mod translation;
 mod uv;
+
+pub use efkpkg::{EfkPkg, EfkPkgFile, EfkPkgFileType, load_efkpkg, load_efkpkg_with_config};
 
 use crate::error::Error;
 use crate::types::ParseConfig;

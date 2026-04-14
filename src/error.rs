@@ -75,4 +75,24 @@ pub enum Error {
         /// The four-byte chunk identifier that was expected.
         chunk_id: String,
     },
+
+    /// An error occurred while reading the `.efkpkg` zip archive.
+    #[error("zip error: {0}")]
+    ZipError(String),
+
+    /// An error occurred while parsing `metafile.json` in a `.efkpkg`.
+    #[error("metafile JSON error: {0}")]
+    JsonError(String),
+
+    /// The `.efkpkg` did not contain the required `metafile.json` entry.
+    #[error("missing metafile.json in .efkpkg")]
+    MissingMetafile,
+
+    /// A file listed in `metafile.json` was not present in the zip archive.
+    #[error("missing entry in .efkpkg: {0}")]
+    MissingEntry(String),
+
+    /// The `.efkpkg` contained no file of type `Effect`.
+    #[error("no effect found in .efkpkg")]
+    NoEffectInPackage,
 }
