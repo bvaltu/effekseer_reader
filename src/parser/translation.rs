@@ -1,11 +1,22 @@
 //! Translation parameter parser.
+//!
+//! Mirrors `Effekseer/Dev/Cpp/Effekseer/Effekseer/Parameter/Effekseer.Translation.h:170-243`
+//! arm-for-arm. Each variant decides whether C++ reads an outer `int32 size`
+//! prefix and whether it advances by that size (`pos += size`) or by the inner
+//! decoder's return length. NurbsCurve and ViewOffset notably do NOT read an
+//! outer size — they read fixed-layout payloads directly.
+//!
+//! The forward-compat protocol: variants with a size prefix run their inner
+//! parse against a sub-reader bounded to `size` bytes via `read_sized_block`,
+//! which absorbs any unread tail (newer writers may append fields older readers
+//! don't know about).
 
 use crate::error::Error;
 use crate::reader::BinaryReader;
 use crate::types::params::TranslationParameter;
 use crate::types::{NurbsCurveLoopType, ParameterTranslationType, ParseConfig};
 
-use super::easing::parse_easing_vector3d;
+use super::easing::parse_vector3d_easing_with_size;
 use super::fcurve::parse_fcurve_vector3d;
 
 /// Parse a TranslationParameter from the binary stream.
@@ -15,70 +26,80 @@ pub(crate) fn parse_translation(
     config: &ParseConfig,
 ) -> Result<TranslationParameter, Error> {
     let type_: ParameterTranslationType = reader.read_enum(config, "Translation.type")?;
-    let size = reader.read_i32()? as usize;
-    let start_pos = reader.position();
 
-    let result = match type_ {
-        ParameterTranslationType::None => TranslationParameter::None,
+    match type_ {
+        ParameterTranslationType::None => Ok(TranslationParameter::None),
+
+        // C++ Effekseer.Translation.h:176-199
         ParameterTranslationType::Fixed => {
-            let ref_eq = reader.read_i32()?;
-            let position = reader.read_vector3d()?;
-            TranslationParameter::Fixed { ref_eq, position }
+            let size = reader.read_i32()? as usize;
+            reader.read_sized_block(size, |sub| {
+                let ref_eq = sub.read_i32()?;
+                let position = sub.read_vector3d()?;
+                Ok(TranslationParameter::Fixed { ref_eq, position })
+            })
         }
+
+        // C++ Effekseer.Translation.h:200-217
         ParameterTranslationType::Pva => {
-            let ref_eq_p = reader.read_ref_min_max()?;
-            let ref_eq_v = reader.read_ref_min_max()?;
-            let ref_eq_a = reader.read_ref_min_max()?;
-            let position = reader.read_random_vector3d()?;
-            let velocity = reader.read_random_vector3d()?;
-            let acceleration = reader.read_random_vector3d()?;
-            TranslationParameter::Pva {
-                ref_eq_p,
-                ref_eq_v,
-                ref_eq_a,
-                position,
-                velocity,
-                acceleration,
-            }
+            let size = reader.read_i32()? as usize;
+            reader.read_sized_block(size, |sub| {
+                let ref_eq_p = sub.read_ref_min_max()?;
+                let ref_eq_v = sub.read_ref_min_max()?;
+                let ref_eq_a = sub.read_ref_min_max()?;
+                let position = sub.read_random_vector3d()?;
+                let velocity = sub.read_random_vector3d()?;
+                let acceleration = sub.read_random_vector3d()?;
+                Ok(TranslationParameter::Pva {
+                    ref_eq_p,
+                    ref_eq_v,
+                    ref_eq_a,
+                    position,
+                    velocity,
+                    acceleration,
+                })
+            })
         }
+
+        // C++ Effekseer.Translation.h:218-224 — `Easing.Load(pos, size, version); pos += size;`
         ParameterTranslationType::Easing => {
-            // minDynamicParameterVersion = 14 (always true), minAppendParameterVersion = 1600
-            let easing = parse_easing_vector3d(reader, version, config, 14, 1600)?;
-            TranslationParameter::Easing(Box::new(easing))
+            let size = reader.read_i32()? as usize;
+            // minDynamicParameterVersion = 14, minAppendParameterVersion = 1600
+            let easing = parse_vector3d_easing_with_size(reader, version, config, 14, 1600, size)?;
+            Ok(TranslationParameter::Easing(Box::new(easing)))
         }
+
+        // C++ Effekseer.Translation.h:225-232 — reads outer size but advances by FCurve->Load
+        // return value. We trust FCurve's inner length (matches existing Rust behavior; see
+        // plan note on FCurve divergence being out of scope).
         ParameterTranslationType::FCurve => {
+            let _size = reader.read_i32()?;
             let fcurve = parse_fcurve_vector3d(reader, version, config)?;
-            TranslationParameter::FCurve(Box::new(fcurve))
+            Ok(TranslationParameter::FCurve(Box::new(fcurve)))
         }
+
+        // C++ Effekseer.Translation.h:233-237 — NO outer size, memcpy 16 bytes
+        // (sizeof(ParameterTranslationNurbsCurve)).
         ParameterTranslationType::NurbsCurve => {
-            // Read as 16-byte memcpy (4x i32/f32)
             let index = reader.read_i32()?;
             let scale = reader.read_f32()?;
             let move_speed = reader.read_f32()?;
             let loop_type: NurbsCurveLoopType =
                 reader.read_enum(config, "Translation.NurbsCurve.loop_type")?;
-            TranslationParameter::NurbsCurve {
+            Ok(TranslationParameter::NurbsCurve {
                 index,
                 scale,
                 move_speed,
                 loop_type,
-            }
+            })
         }
+
+        // C++ Effekseer.Translation.h:238-242 — NO outer size, memcpy 8 bytes (random_float).
         ParameterTranslationType::ViewOffset => {
             let distance = reader.read_random_float()?;
-            TranslationParameter::ViewOffset { distance }
+            Ok(TranslationParameter::ViewOffset { distance })
         }
-        _ => {
-            // Unknown type — skip the data
-            TranslationParameter::None
-        }
-    };
 
-    // Advance cursor to start_pos + size for forward compatibility
-    let consumed = reader.position() - start_pos;
-    if size > consumed {
-        reader.skip(size - consumed)?;
+        _ => Ok(TranslationParameter::None),
     }
-
-    Ok(result)
 }

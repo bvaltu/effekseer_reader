@@ -191,8 +191,14 @@ pub enum RotationParameter {
     FCurve(Box<FCurveVector3D>),
     /// Rotate to face viewpoint (no data).
     RotateToViewpoint,
-    /// Velocity-based rotation (no data).
-    Velocity,
+    /// Velocity-based rotation. Axis selects which local axis aligns with the
+    /// instantaneous velocity vector. Mirrors C++ `RotationVelocity.axis`
+    /// (`Effekseer.Rotation.cpp:98` reads it from disk;
+    /// `Effekseer.Rotation.cpp:381-405` consumes it during rendering).
+    Velocity {
+        /// Axis to align with velocity.
+        axis: super::enums::DirectionalAxisType,
+    },
 }
 
 // ============================================================

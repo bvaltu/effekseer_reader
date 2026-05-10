@@ -59,6 +59,43 @@ impl<'a> BinaryReader<'a> {
         Ok(())
     }
 
+    /// Parse a size-prefixed block of bytes via a bounded sub-reader.
+    ///
+    /// Mirrors the C++ `BinaryReader<true> r(pos, size); ...; pos += size;` pattern
+    /// used throughout `Effekseer/Dev/Cpp/Effekseer/Effekseer/Parameter/*` and
+    /// `Utils/Effekseer.Compatiblity.h`. The closure runs against a sub-reader that
+    /// covers exactly `size` bytes; on success the outer position is unconditionally
+    /// advanced by `size`, absorbing any unread tail bytes (the format's
+    /// forward-compatibility mechanism — newer writers append fields older readers
+    /// don't know about).
+    ///
+    /// Errors:
+    /// - `Error::UnexpectedEof` if the outer buffer doesn't have `size` bytes
+    ///   remaining (returned before the closure runs; outer position unchanged).
+    /// - Inner closure errors propagate unchanged; outer position unchanged so the
+    ///   caller observes the failure point.
+    /// - The bounded sub-reader returns `Error::UnexpectedEof` if the closure tries
+    ///   to read past `size` bytes, treating the over-read as a parser bug rather
+    ///   than as forward-compat tail.
+    pub fn read_sized_block<F, T>(&mut self, size: usize, f: F) -> Result<T, Error>
+    where
+        F: for<'b> FnOnce(&mut BinaryReader<'b>) -> Result<T, Error>,
+    {
+        let block_end = self
+            .pos
+            .checked_add(size)
+            .filter(|end| *end <= self.data.len())
+            .ok_or(Error::UnexpectedEof {
+                position: self.pos,
+                expected_bytes: size,
+            })?;
+        let block = &self.data[self.pos..block_end];
+        let mut sub = BinaryReader::new(block);
+        let value = f(&mut sub)?;
+        self.pos = block_end;
+        Ok(value)
+    }
+
     /// Read `n` raw bytes from the current position.
     pub fn read_bytes(&mut self, n: usize) -> Result<&'a [u8], Error> {
         if self.pos + n > self.data.len() {
@@ -491,5 +528,70 @@ mod tests {
         assert_eq!(r.position(), 5);
         assert_eq!(r.remaining(), 5);
         assert!(r.skip(6).is_err());
+    }
+
+    #[test]
+    fn test_sized_block_under_read_skips_tail() {
+        let data = [1u8, 2, 3, 4, 5, 6, 7, 8];
+        let mut r = BinaryReader::new(&data);
+        let v = r.read_sized_block(8, |sub| sub.read_i32()).unwrap();
+        assert_eq!(v, 0x04030201);
+        assert_eq!(r.position(), 8);
+        assert_eq!(r.remaining(), 0);
+    }
+
+    #[test]
+    fn test_sized_block_exact_consume() {
+        let data = [1u8, 2, 3, 4];
+        let mut r = BinaryReader::new(&data);
+        let v = r.read_sized_block(4, |sub| sub.read_i32()).unwrap();
+        assert_eq!(v, 0x04030201);
+        assert_eq!(r.position(), 4);
+    }
+
+    #[test]
+    fn test_sized_block_over_read_errors_and_keeps_outer_position() {
+        let data = [1u8, 2, 3, 4];
+        let mut r = BinaryReader::new(&data);
+        let res: Result<(), _> = r.read_sized_block(4, |sub| {
+            let _ = sub.read_i32()?;
+            sub.read_i32()?;
+            Ok(())
+        });
+        assert!(matches!(res, Err(Error::UnexpectedEof { .. })));
+        assert_eq!(r.position(), 0);
+    }
+
+    #[test]
+    fn test_sized_block_zero_size_noop() {
+        let data = [1u8, 2, 3, 4];
+        let mut r = BinaryReader::new(&data);
+        let v = r.read_sized_block(0, |_sub| Ok(42i32)).unwrap();
+        assert_eq!(v, 42);
+        assert_eq!(r.position(), 0);
+    }
+
+    #[test]
+    fn test_sized_block_size_exceeds_buffer_errors() {
+        let data = [1u8, 2, 3];
+        let mut r = BinaryReader::new(&data);
+        let res = r.read_sized_block(8, |sub| sub.read_i32());
+        assert!(matches!(res, Err(Error::UnexpectedEof { .. })));
+        assert_eq!(r.position(), 0);
+    }
+
+    #[test]
+    fn test_sized_block_advance_then_continue() {
+        // Two consecutive blocks: [size=4, payload, size=2, payload]-style sequence.
+        let mut data = Vec::new();
+        data.extend_from_slice(&7i32.to_le_bytes());
+        data.extend_from_slice(&[0xAA, 0xBB, 0xCC]); // tail for block 1
+        data.extend_from_slice(&13i32.to_le_bytes());
+        let mut r = BinaryReader::new(&data);
+        let v1 = r.read_sized_block(7, |sub| sub.read_i32()).unwrap();
+        assert_eq!(v1, 7);
+        assert_eq!(r.position(), 7);
+        let v2 = r.read_i32().unwrap();
+        assert_eq!(v2, 13);
     }
 }

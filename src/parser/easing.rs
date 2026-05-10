@@ -192,3 +192,55 @@ pub(crate) fn parse_easing_vector3d(
         individual_types,
     })
 }
+
+/// `sizeof(easing_float)` in C++: 2 random_float (16 B) + 3 float (12 B) = 28.
+/// Used by `parse_float_easing_with_size` for `version < 1608` when no inner
+/// size prefix exists on disk.
+const SIZEOF_EASING_FLOAT: usize = 28;
+
+/// Mirror of C++ `LoadFloatEasing`
+/// (`Effekseer/Dev/Cpp/Effekseer/Effekseer/Utils/Effekseer.Compatiblity.h:10`).
+///
+/// For `version >= 1608` (Version16Alpha9), reads an `int32 size` and bounds the
+/// inner load to that size. For older versions, bounds to `sizeof(easing_float)`
+/// = 28 bytes. In both cases the outer reader advances by exactly the bounded
+/// size after the inner load — this absorbs any forward-compat fields the writer
+/// emitted that `parse_easing_float` doesn't know about.
+pub(crate) fn parse_float_easing_with_size(
+    reader: &mut BinaryReader,
+    version: i32,
+    config: &ParseConfig,
+    min_dynamic_version: i32,
+    min_append_version: i32,
+) -> Result<ParameterEasingFloat, Error> {
+    let size = if version >= 1608 {
+        reader.read_i32()? as usize
+    } else {
+        SIZEOF_EASING_FLOAT
+    };
+    reader.read_sized_block(size, |sub| {
+        parse_easing_float(sub, version, config, min_dynamic_version, min_append_version)
+    })
+}
+
+/// Vector3D analogue of `parse_float_easing_with_size`. C++ has no
+/// `LoadVector3DEasing` symbol — instead, callers
+/// (`Effekseer.Rotation.cpp`, `Effekseer.Translation.h`, `Effekseer.Scaling.h`)
+/// read the outer-variant `size` and call `param.Load(pos, size, version)`
+/// directly with that size. The effect is identical: bounded inner load, then
+/// `pos += size`.
+///
+/// Caller passes the outer-variant `size` it already read; the inner parse runs
+/// against a sub-reader bounded to `size` bytes.
+pub(crate) fn parse_vector3d_easing_with_size(
+    reader: &mut BinaryReader,
+    version: i32,
+    config: &ParseConfig,
+    min_dynamic_version: i32,
+    min_append_version: i32,
+    size: usize,
+) -> Result<ParameterEasingVector3D, Error> {
+    reader.read_sized_block(size, |sub| {
+        parse_easing_vector3d(sub, version, config, min_dynamic_version, min_append_version)
+    })
+}

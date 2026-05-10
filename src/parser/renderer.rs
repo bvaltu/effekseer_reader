@@ -15,7 +15,7 @@ use crate::types::{
 };
 
 use super::color::parse_all_type_color;
-use super::easing::parse_easing_float;
+use super::easing::parse_float_easing_with_size;
 
 /// Parse the renderer section for a given node type.
 pub(crate) fn parse_renderer(
@@ -113,7 +113,9 @@ fn parse_ring_single_parameter(
             Ok(RingSingleParameter::Random { max, min })
         }
         RingSingleType::Easing => {
-            let easing = parse_easing_float(reader, version, config, 1608, 1608)?;
+            // Mirrors C++ EffectNodeRing::LoadSingleParameter -> LoadFloatEasing
+            // (Effekseer.EffectNodeRing.cpp:433 / Utils/Effekseer.Compatiblity.h:10).
+            let easing = parse_float_easing_with_size(reader, version, config, 1608, 1608)?;
             Ok(RingSingleParameter::Easing(Box::new(easing)))
         }
         _ => Ok(RingSingleParameter::Fixed { value: 0.0 }),
@@ -289,8 +291,13 @@ fn parse_ring_renderer(
     };
     // [6] VertexCount
     let vertex_count = reader.read_i32()?;
-    // [7] ViewingAngle (legacy — always read, stored but superseded)
-    let viewing_angle = parse_ring_single_parameter(reader, version, config)?;
+    // [7] ViewingAngle (legacy — always read for back-compat, stored but superseded
+    // by Shape.StartingAngle/EndingAngle in version >= 15). C++ parses this with
+    // Version15 (=1500) regardless of the effect's actual version
+    // (Effekseer.EffectNodeRing.cpp:76), so the inner LoadFloatEasing uses the
+    // v<1608 fallback (no inner size prefix, fixed 28-byte easing layout) and
+    // parse_easing_float uses the v<1600 fallbacks for middle/individual fields.
+    let viewing_angle = parse_ring_single_parameter(reader, 1500, config)?;
     // [8] OuterLocation
     let outer_location = parse_ring_location_parameter(reader, config)?;
     // [9] InnerLocation

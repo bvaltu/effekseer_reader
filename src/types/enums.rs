@@ -478,6 +478,25 @@ define_enum_i32! {
 }
 
 define_enum_i32! {
+    /// Axis-aligned direction for `RotationParameter::Velocity`.
+    /// Mirrors C++ `Effekseer.Rotation.h::DirectionalAxisType`.
+    DirectionalAxisType {
+        /// Positive X.
+        XPositive = 0,
+        /// Negative X.
+        XNegative = 1,
+        /// Positive Y.
+        YPositive = 2,
+        /// Negative Y.
+        YNegative = 3,
+        /// Positive Z (default).
+        ZPositive = 4,
+        /// Negative Z.
+        ZNegative = 5,
+    }
+}
+
+define_enum_i32! {
     /// Scaling parameter type.
     ParameterScalingType {
         /// Fixed scale.

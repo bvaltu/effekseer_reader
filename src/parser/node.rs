@@ -196,6 +196,7 @@ fn parse_node_params(
         None
     };
 
+
     // [18] Soft Particle
     let soft_particle = {
         let mut sp = SoftParticleParam::default();
@@ -208,6 +209,7 @@ fn parse_node_params(
         }
         sp
     };
+
 
     // [19] Renderer
     let renderer = parse_renderer(reader, node_type, version, config)?;
