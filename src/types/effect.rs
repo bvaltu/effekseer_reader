@@ -62,3 +62,42 @@ pub struct CullingInfo {
     /// Radius of the culling sphere.
     pub radius: f32,
 }
+
+// ============================================================
+// Authoring API — Effect constructors
+// ============================================================
+
+impl Effect {
+    /// Construct a sprite-emitter `Effect` at the v1810 wire format.
+    ///
+    /// `color_images` lists external color-texture references by string.
+    /// Downstream consumers (e.g. `bevy_effekseer::EffekseerEffect::from_data`)
+    /// resolve them by index into the texture handle vec.
+    ///
+    /// `root` is the node tree, typically constructed via
+    /// [`super::node::EffectNode::root`] +
+    /// [`super::node::EffectNode::sprite`].
+    pub fn sprite_emitter(color_images: Vec<String>, root: super::node::EffectNode) -> Self {
+        Self {
+            version: 1810,
+            magnification: 1.0,
+            random_seed: 0,
+            culling: None,
+            lod_distances: None,
+            color_images,
+            normal_images: Vec::new(),
+            distortion_images: Vec::new(),
+            sounds: Vec::new(),
+            models: Vec::new(),
+            materials: Vec::new(),
+            curves: Vec::new(),
+            procedural_models: Vec::new(),
+            dynamic_inputs: Vec::new(),
+            dynamic_equations: Vec::new(),
+            rendering_node_count: 1,
+            rendering_threshold: 0,
+            root,
+            target_location: None,
+        }
+    }
+}

@@ -25,3 +25,15 @@ pub enum AllTypeColorParameter {
     /// Gradient over lifetime.
     Gradient(Box<Gradient>),
 }
+
+impl AllTypeColorParameter {
+    /// Constant color applied to every particle.
+    pub fn fixed(color: Color) -> Self {
+        Self::Fixed { all: color }
+    }
+
+    /// Per-particle random color drawn from the given range.
+    pub fn random(range: RandomColor) -> Self {
+        Self::Random { all: range }
+    }
+}

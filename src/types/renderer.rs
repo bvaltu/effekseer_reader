@@ -296,3 +296,53 @@ pub enum TrackSizeParameter {
         size: f32,
     },
 }
+
+// ============================================================
+// Constructors — SpriteParams + SpritePositionParameter
+// ============================================================
+
+impl SpritePositionParameter {
+    /// Standard 1×1 quad centered on the origin (`±0.5` on each corner).
+    pub const fn unit_quad() -> Self {
+        Self::Fixed {
+            ll: Vector2D { x: -0.5, y: -0.5 },
+            lr: Vector2D { x:  0.5, y: -0.5 },
+            ul: Vector2D { x: -0.5, y:  0.5 },
+            ur: Vector2D { x:  0.5, y:  0.5 },
+        }
+    }
+
+    /// Square quad of side `2 * half_extent`, centered on the origin.
+    pub const fn sized_quad(half_extent: f32) -> Self {
+        Self::Fixed {
+            ll: Vector2D { x: -half_extent, y: -half_extent },
+            lr: Vector2D { x:  half_extent, y: -half_extent },
+            ul: Vector2D { x: -half_extent, y:  half_extent },
+            ur: Vector2D { x:  half_extent, y:  half_extent },
+        }
+    }
+
+    /// Explicit per-corner positions.
+    pub const fn fixed(ll: Vector2D, lr: Vector2D, ul: Vector2D, ur: Vector2D) -> Self {
+        Self::Fixed { ll, lr, ul, ur }
+    }
+}
+
+impl SpriteParams {
+    /// Camera-facing unit quad tinted neutral white. Authors typically tint
+    /// at spawn time via `EffekseerEmitter.color_scale`.
+    pub fn neutral_quad() -> Self {
+        Self::tinted_quad(Color::WHITE)
+    }
+
+    /// Camera-facing unit quad tinted with the given color.
+    pub fn tinted_quad(color: Color) -> Self {
+        Self {
+            rendering_order: RenderingOrder::FirstCreatedInstanceIsFirst,
+            billboard: BillboardType::Billboard,
+            all_color: AllTypeColorParameter::fixed(color),
+            sprite_color: SpriteColorParameter::Default,
+            sprite_position: SpritePositionParameter::unit_quad(),
+        }
+    }
+}

@@ -76,6 +76,26 @@ macro_rules! define_enum_u8 {
 }
 
 // ============================================================
+// Default impls — only on enums whose "off / identity / no-op"
+// semantic is unambiguous. Authoring-time `..Default::default()`
+// on a containing struct picks the variant named below.
+// ============================================================
+
+macro_rules! impl_default_variant {
+    ($enum:ident :: $variant:ident) => {
+        impl Default for $enum {
+            fn default() -> Self {
+                Self::$variant
+            }
+        }
+    };
+}
+
+// Core enums — defined further down; Default impls live here so
+// they're easy to audit as a group.
+// (Definitions follow in the "Core Enums" section below.)
+
+// ============================================================
 // Core Enums
 // ============================================================
 
@@ -1072,3 +1092,22 @@ bitflags::bitflags! {
         const WHEN_TRIGGERED = 8;
     }
 }
+
+impl Default for RemovalTiming {
+    fn default() -> Self {
+        Self::WHEN_LIFE_IS_EXTINCT
+    }
+}
+
+// ============================================================
+// Default impls — see comment above the Core Enums section.
+// ============================================================
+
+impl_default_variant!(BindType::NotBind);
+impl_default_variant!(TranslationParentBindType::NotBind);
+impl_default_variant!(ZSortType::None);
+impl_default_variant!(KillType::None);
+impl_default_variant!(TriggerType::None);
+impl_default_variant!(ParameterSoundType::None);
+impl_default_variant!(FadeOutType::None);
+impl_default_variant!(GenerationTiming::Continuous);

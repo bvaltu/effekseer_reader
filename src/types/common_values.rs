@@ -65,3 +65,81 @@ pub struct RemovalParameter {
     /// Trigger for removal.
     pub trigger_to_remove: TriggerValues,
 }
+
+impl Default for RemovalParameter {
+    fn default() -> Self {
+        Self {
+            flags: RemovalTiming::default(),
+            trigger_to_remove: TriggerValues::default(),
+        }
+    }
+}
+
+// ============================================================
+// Constructors — GenerationParameter
+// ============================================================
+
+impl GenerationParameter {
+    /// One-shot burst: spawn `count` particles at t=0, then stop. This is
+    /// the default for most programmatic VFX (sparks, explosions, impacts).
+    pub fn burst_once(count: i32) -> Self {
+        Self {
+            ref_eq_interval: RefMinMax::default(),
+            ref_eq_offset: RefMinMax::default(),
+            ref_eq_burst: RefMinMax::default(),
+            type_: GenerationTiming::default(),
+            interval: RandomFloat { max: 1.0, min: 1.0 },
+            offset: RandomFloat::default(),
+            burst: RandomInt { max: count, min: count },
+            trigger_to_start: TriggerValues::default(),
+            trigger_to_stop: TriggerValues::default(),
+            trigger_to_generate: TriggerValues::default(),
+        }
+    }
+
+    /// Continuous emission: spawn `burst_per_interval` particles every
+    /// `interval` frames. Suitable for sustained effects (smoke, fire,
+    /// trails).
+    pub fn continuous(interval: f32, burst_per_interval: i32) -> Self {
+        Self {
+            ref_eq_interval: RefMinMax::default(),
+            ref_eq_offset: RefMinMax::default(),
+            ref_eq_burst: RefMinMax::default(),
+            type_: GenerationTiming::default(),
+            interval: RandomFloat { max: interval, min: interval },
+            offset: RandomFloat::default(),
+            burst: RandomInt { max: burst_per_interval, min: burst_per_interval },
+            trigger_to_start: TriggerValues::default(),
+            trigger_to_stop: TriggerValues::default(),
+            trigger_to_generate: TriggerValues::default(),
+        }
+    }
+}
+
+// ============================================================
+// Constructors — ParameterCommonValues
+// ============================================================
+
+impl ParameterCommonValues {
+    /// One-shot burst of `count` particles, each living for a random frame
+    /// count within `life_frames`.
+    ///
+    /// Critically, this sets `max_generation = count` so the GPU slab
+    /// allocates capacity for every burst particle. Hand-constructing this
+    /// struct with `max_generation = 1` and `burst.max = 10` silently
+    /// truncates to one visible particle.
+    pub fn burst(count: i32, life_frames: std::ops::RangeInclusive<i32>) -> Self {
+        let (life_min, life_max) = life_frames.into_inner();
+        Self {
+            ref_eq_max_generation: -1,
+            ref_eq_life: RefMinMax::default(),
+            max_generation: count,
+            translation_bind_type: TranslationParentBindType::WhenCreating,
+            rotation_bind_type: BindType::NotBind,
+            scaling_bind_type: BindType::WhenCreating,
+            life: RandomInt { max: life_max, min: life_min },
+            generation: GenerationParameter::burst_once(count),
+            removal: RemovalParameter::default(),
+        }
+    }
+}

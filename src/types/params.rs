@@ -336,3 +336,102 @@ pub struct LODsParam {
     /// Behavior when node doesn't match active LOD.
     pub lod_behaviour: super::enums::NonMatchingLODBehaviour,
 }
+
+// ============================================================
+// Constructors — TranslationParameter
+// ============================================================
+
+impl TranslationParameter {
+    /// Particles do not move from their spawn position.
+    pub fn stationary() -> Self {
+        Self::Pva {
+            ref_eq_p: RefMinMax::default(),
+            ref_eq_v: RefMinMax::default(),
+            ref_eq_a: RefMinMax::default(),
+            position: RandomVector3D::zero(),
+            velocity: RandomVector3D::zero(),
+            acceleration: RandomVector3D::zero(),
+        }
+    }
+
+    /// Explicit position / velocity / acceleration ranges.
+    pub fn pva(
+        position: RandomVector3D,
+        velocity: RandomVector3D,
+        acceleration: RandomVector3D,
+    ) -> Self {
+        Self::Pva {
+            ref_eq_p: RefMinMax::default(),
+            ref_eq_v: RefMinMax::default(),
+            ref_eq_a: RefMinMax::default(),
+            position,
+            velocity,
+            acceleration,
+        }
+    }
+
+    /// Outward-radial velocity burst: particles fly omnidirectionally at up
+    /// to `speed` units/second on each axis. Position is centered on the
+    /// spawn point; acceleration is zero.
+    pub fn radial_velocity(speed: f32) -> Self {
+        Self::pva(
+            RandomVector3D::zero(),
+            RandomVector3D::symmetric_uniform(speed),
+            RandomVector3D::zero(),
+        )
+    }
+}
+
+// ============================================================
+// Defaults / constructors — RotationParameter
+// ============================================================
+
+impl Default for RotationParameter {
+    fn default() -> Self {
+        Self::None
+    }
+}
+
+// ============================================================
+// Constructors — ScalingParameter
+// ============================================================
+
+impl ScalingParameter {
+    /// Unit scale (1, 1, 1) — particles render at their authored size.
+    pub fn unit() -> Self {
+        Self::Fixed {
+            ref_eq: -1,
+            scale: Vector3D { x: 1.0, y: 1.0, z: 1.0 },
+        }
+    }
+
+    /// Uniform scale factor applied to all three axes.
+    pub fn fixed_uniform(scalar: f32) -> Self {
+        Self::Fixed {
+            ref_eq: -1,
+            scale: Vector3D { x: scalar, y: scalar, z: scalar },
+        }
+    }
+
+    /// Non-uniform scale.
+    pub fn fixed(scale: Vector3D) -> Self {
+        Self::Fixed { ref_eq: -1, scale }
+    }
+}
+
+// ============================================================
+// Constructors — SpawnLocationParameter
+// ============================================================
+
+impl SpawnLocationParameter {
+    /// Spawn exactly at the emitter's transform origin.
+    pub fn point_at_origin() -> Self {
+        Self::Point { location: RandomVector3D::zero() }
+    }
+
+    /// Spawn within a symmetric box around the emitter origin: `±half_extent`
+    /// on each axis.
+    pub fn point_jitter(half_extent: f32) -> Self {
+        Self::Point { location: RandomVector3D::symmetric_uniform(half_extent) }
+    }
+}

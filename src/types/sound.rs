@@ -13,6 +13,15 @@ pub struct ParameterSound {
     pub data: Option<SoundData>,
 }
 
+impl Default for ParameterSound {
+    fn default() -> Self {
+        Self {
+            sound_type: ParameterSoundType::default(),
+            data: None,
+        }
+    }
+}
+
 /// Sound data (when sound is enabled).
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
