@@ -47,19 +47,3 @@ pub enum KillTypeParams {
         is_kill_inside: bool,
     },
 }
-
-impl Default for KillTypeParams {
-    fn default() -> Self {
-        Self::None
-    }
-}
-
-impl Default for KillRulesParameter {
-    fn default() -> Self {
-        Self {
-            kill_type: KillType::default(),
-            is_scale_and_rotation_applied: false,
-            params: KillTypeParams::default(),
-        }
-    }
-}

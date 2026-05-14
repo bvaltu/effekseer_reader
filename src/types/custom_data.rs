@@ -24,9 +24,3 @@ pub enum ParameterCustomData {
     /// Dynamic input (reads zero bytes from binary; values sourced at runtime).
     DynamicInput,
 }
-
-impl Default for ParameterCustomData {
-    fn default() -> Self {
-        Self::None
-    }
-}
